@@ -10,70 +10,69 @@ import (
 	"syscall"
 	"time"
 
-	"my-backend/config"
+	"SotoAyam/config"
+	"SotoAyam/internal/handlers"
+	"SotoAyam/internal/repository"
+	"SotoAyam/internal/routes"
+	"SotoAyam/internal/services"
+	"SotoAyam/internal/utils"
 )
 
 func main() {
 	if err := config.LoadEnv(); err != nil {
-		log.Fatalf("gagal membaca environment variable: %v", err)
+		log.Fatalf(
+			"gagal membaca environment: %v",
+			err,
+		)
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("konfigurasi aplikasi tidak valid: %v", err)
+		log.Fatalf(
+			"konfigurasi tidak valid: %v",
+			err,
+		)
 	}
 
-	appCtx := context.Background()
+	ctx := context.Background()
 
 	dbPool, err := config.NewPostgresPool(
-		appCtx,
+		ctx,
 		cfg.Database,
 	)
 	if err != nil {
-		log.Fatalf("koneksi database gagal: %v", err)
+		log.Fatalf(
+			"koneksi PostgreSQL gagal: %v",
+			err,
+		)
 	}
 	defer dbPool.Close()
 
-	/*
-		Repository nantinya menerima dbPool, misalnya:
+	jwtManager := utils.NewJWTManager(
+		cfg.JWT.AccessSecret,
+		cfg.JWT.Issuer,
+		cfg.JWT.AccessExpiration,
+	)
 
-		userRepository := repository.NewUserRepository(dbPool)
-		productRepository := repository.NewProductRepository(dbPool)
-		orderRepository := repository.NewOrderRepository(dbPool)
-	*/
+	userRepository := repository.NewUserRepository(dbPool)
 
-	mux := http.NewServeMux()
+	authService := services.NewAuthService(
+		userRepository,
+		jwtManager,
+	)
 
-	mux.HandleFunc("/health", func(
-		w http.ResponseWriter,
-		r *http.Request,
-	) {
-		ctx, cancel := context.WithTimeout(
-			r.Context(),
-			3*time.Second,
-		)
-		defer cancel()
+	authHandler := handlers.NewAuthHandler(
+		authService,
+	)
 
-		if err := dbPool.Ping(ctx); err != nil {
-			http.Error(
-				w,
-				`{"status":"error","database":"disconnected"}`,
-				http.StatusServiceUnavailable,
-			)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		_, _ = w.Write(
-			[]byte(`{"status":"ok","database":"connected"}`),
-		)
-	})
+	router := routes.NewRouter(
+		authHandler,
+		jwtManager,
+	)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.App.Port,
-		Handler:           mux,
+		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -82,38 +81,43 @@ func main() {
 
 	go func() {
 		log.Printf(
-			"%s berjalan pada http://localhost:%s",
-			cfg.App.Name,
+			"API berjalan pada http://localhost:%s",
 			cfg.App.Port,
 		)
 
 		if err := server.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server gagal dijalankan: %v", err)
+			log.Fatalf(
+				"server gagal berjalan: %v",
+				err,
+			)
 		}
 	}()
 
-	shutdownSignal := make(chan os.Signal, 1)
+	signalChannel := make(chan os.Signal, 1)
 
 	signal.Notify(
-		shutdownSignal,
+		signalChannel,
 		os.Interrupt,
 		syscall.SIGTERM,
 	)
 
-	<-shutdownSignal
+	<-signalChannel
 
 	log.Println("mematikan server...")
 
-	shutdownCtx, cancel := context.WithTimeout(
+	shutdownContext, cancel := context.WithTimeout(
 		context.Background(),
 		10*time.Second,
 	)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("server gagal dimatikan dengan aman: %v", err)
+	if err := server.Shutdown(shutdownContext); err != nil {
+		log.Printf(
+			"gagal mematikan server dengan aman: %v",
+			err,
+		)
 	}
 
-	log.Println("server berhasil dimatikan")
+	log.Println("server berhenti")
 }

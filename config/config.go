@@ -10,6 +10,7 @@ import (
 type Config struct {
 	App      AppConfig
 	Database DatabaseConfig
+	JWT      JWTConfig
 }
 
 type AppConfig struct {
@@ -18,50 +19,46 @@ type AppConfig struct {
 	Port string
 }
 
+type JWTConfig struct {
+	AccessSecret     string
+	Issuer           string
+	AccessExpiration time.Duration
+}
+
 type DatabaseConfig struct {
-	Host                   string
-	Port                   string
-	User                   string
-	Password               string
-	Name                   string
-	SSLMode                string
-	MaxConnections         int32
-	MinConnections         int32
-	MaxConnLifetime        time.Duration
-	MaxConnIdleTime        time.Duration
-	HealthCheckPeriod      time.Duration
+	Host              string
+	Port              string
+	User              string
+	Password          string
+	Name              string
+	SSLMode           string
+	MaxConnections    int32
+	MinConnections    int32
+	MaxConnLifetime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
 }
 
 func LoadConfig() (*Config, error) {
-	maxConnections, err := getEnvInt32("DB_MAX_CONNECTIONS", 20)
-	if err != nil {
-		return nil, err
-	}
-
-	minConnections, err := getEnvInt32("DB_MIN_CONNECTIONS", 2)
-	if err != nil {
-		return nil, err
-	}
-
-	maxConnLifetimeMinutes, err := getEnvInt(
-		"DB_MAX_CONN_LIFETIME_MINUTES",
-		30,
+	accessExpirationMinutes, err := getEnvInt(
+		"JWT_ACCESS_EXPIRE_MINUTES",
+		15,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	maxConnIdleTimeMinutes, err := getEnvInt(
-		"DB_MAX_CONN_IDLE_TIME_MINUTES",
-		10,
+	maxConnections, err := getEnvInt32(
+		"DB_MAX_CONNECTIONS",
+		20,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	healthCheckSeconds, err := getEnvInt(
-		"DB_HEALTH_CHECK_SECONDS",
-		30,
+	minConnections, err := getEnvInt32(
+		"DB_MIN_CONNECTIONS",
+		2,
 	)
 	if err != nil {
 		return nil, err
@@ -73,6 +70,21 @@ func LoadConfig() (*Config, error) {
 			Env:  getEnv("APP_ENV", "development"),
 			Port: getEnv("APP_PORT", "8080"),
 		},
+
+		JWT: JWTConfig{
+			AccessSecret: getEnv(
+				"JWT_ACCESS_SECRET",
+				"",
+			),
+			Issuer: getEnv(
+				"JWT_ISSUER",
+				"soto-ordering-api",
+			),
+			AccessExpiration: time.Duration(
+				accessExpirationMinutes,
+			) * time.Minute,
+		},
+
 		Database: DatabaseConfig{
 			Host:           getEnv("DB_HOST", "localhost"),
 			Port:           getEnv("DB_PORT", "5432"),
@@ -83,14 +95,9 @@ func LoadConfig() (*Config, error) {
 			MaxConnections: maxConnections,
 			MinConnections: minConnections,
 
-			MaxConnLifetime: time.Duration(maxConnLifetimeMinutes) *
-				time.Minute,
-
-			MaxConnIdleTime: time.Duration(maxConnIdleTimeMinutes) *
-				time.Minute,
-
-			HealthCheckPeriod: time.Duration(healthCheckSeconds) *
-				time.Second,
+			MaxConnLifetime:   30 * time.Minute,
+			MaxConnIdleTime:   10 * time.Minute,
+			HealthCheckPeriod: 30 * time.Second,
 		},
 	}
 
@@ -106,10 +113,6 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("DB_HOST tidak boleh kosong")
 	}
 
-	if c.Database.Port == "" {
-		return fmt.Errorf("DB_PORT tidak boleh kosong")
-	}
-
 	if c.Database.User == "" {
 		return fmt.Errorf("DB_USER tidak boleh kosong")
 	}
@@ -118,17 +121,9 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("DB_NAME tidak boleh kosong")
 	}
 
-	if c.Database.MaxConnections < 1 {
-		return fmt.Errorf("DB_MAX_CONNECTIONS minimal 1")
-	}
-
-	if c.Database.MinConnections < 0 {
-		return fmt.Errorf("DB_MIN_CONNECTIONS tidak boleh negatif")
-	}
-
-	if c.Database.MinConnections > c.Database.MaxConnections {
+	if len(c.JWT.AccessSecret) < 32 {
 		return fmt.Errorf(
-			"DB_MIN_CONNECTIONS tidak boleh lebih besar dari DB_MAX_CONNECTIONS",
+			"JWT_ACCESS_SECRET minimal 32 karakter",
 		)
 	}
 
@@ -165,7 +160,7 @@ func getEnvInt(key string, fallback int) (int, error) {
 	parsedValue, err := strconv.Atoi(value)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"environment variable %s harus berupa angka: %w",
+			"%s harus berupa angka: %w",
 			key,
 			err,
 		)
@@ -174,16 +169,23 @@ func getEnvInt(key string, fallback int) (int, error) {
 	return parsedValue, nil
 }
 
-func getEnvInt32(key string, fallback int32) (int32, error) {
+func getEnvInt32(
+	key string,
+	fallback int32,
+) (int32, error) {
 	value := os.Getenv(key)
 	if value == "" {
 		return fallback, nil
 	}
 
-	parsedValue, err := strconv.ParseInt(value, 10, 32)
+	parsedValue, err := strconv.ParseInt(
+		value,
+		10,
+		32,
+	)
 	if err != nil {
 		return 0, fmt.Errorf(
-			"environment variable %s harus berupa angka: %w",
+			"%s harus berupa angka: %w",
 			key,
 			err,
 		)
