@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"SotoAyam/internal/dto"
 	"SotoAyam/internal/services"
@@ -13,35 +12,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CategoryHandler struct {
-	categoryService services.CategoryService
+type DiningTableHandler struct {
+	diningTableService services.DiningTableService
 }
 
-func NewCategoryHandler(
-	categoryService services.CategoryService,
-) *CategoryHandler {
-	return &CategoryHandler{
-		categoryService: categoryService,
+func NewDiningTableHandler(
+	diningTableService services.DiningTableService,
+) *DiningTableHandler {
+	return &DiningTableHandler{
+		diningTableService: diningTableService,
 	}
 }
 
-func (h *CategoryHandler) CreateCategory(
+func (h *DiningTableHandler) CreateDiningTable(
 	c *gin.Context,
 ) {
-	var request dto.CreateCategoryRequest
+	var request dto.CreateDiningTableRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		utils.ErrorResponse(
 			c,
 			http.StatusBadRequest,
-			"data kategori tidak valid",
+			"data meja tidak valid",
 			err.Error(),
 		)
 		return
 	}
 
 	response, err :=
-		h.categoryService.CreateCategory(
+		h.diningTableService.CreateDiningTable(
 			c.Request.Context(),
 			request,
 		)
@@ -50,7 +49,7 @@ func (h *CategoryHandler) CreateCategory(
 		switch {
 		case errors.Is(
 			err,
-			services.ErrCategoryExists,
+			services.ErrDiningTableExists,
 		):
 			utils.ErrorResponse(
 				c,
@@ -69,16 +68,16 @@ func (h *CategoryHandler) CreateCategory(
 	utils.SuccessResponse(
 		c,
 		http.StatusCreated,
-		"kategori berhasil dibuat",
+		"meja berhasil dibuat",
 		response,
 	)
 }
 
-func (h *CategoryHandler) GetAllCategories(
+func (h *DiningTableHandler) GetAllDiningTables(
 	c *gin.Context,
 ) {
 	response, err :=
-		h.categoryService.GetAllCategories(
+		h.diningTableService.GetAllDiningTables(
 			c.Request.Context(),
 		)
 
@@ -90,12 +89,12 @@ func (h *CategoryHandler) GetAllCategories(
 	utils.SuccessResponse(
 		c,
 		http.StatusOK,
-		"data kategori berhasil diambil",
+		"data meja berhasil diambil",
 		response,
 	)
 }
 
-func (h *CategoryHandler) GetCategoryByID(
+func (h *DiningTableHandler) GetDiningTableByID(
 	c *gin.Context,
 ) {
 	id, err := strconv.ParseInt(
@@ -108,14 +107,14 @@ func (h *CategoryHandler) GetCategoryByID(
 		utils.ErrorResponse(
 			c,
 			http.StatusBadRequest,
-			"id kategori tidak valid",
+			"id meja tidak valid",
 			nil,
 		)
 		return
 	}
 
 	response, err :=
-		h.categoryService.GetCategoryByID(
+		h.diningTableService.GetDiningTableByID(
 			c.Request.Context(),
 			id,
 		)
@@ -124,7 +123,7 @@ func (h *CategoryHandler) GetCategoryByID(
 		switch {
 		case errors.Is(
 			err,
-			services.ErrCategoryNotFound,
+			services.ErrDiningTableNotFound,
 		):
 			utils.ErrorResponse(
 				c,
@@ -143,63 +142,12 @@ func (h *CategoryHandler) GetCategoryByID(
 	utils.SuccessResponse(
 		c,
 		http.StatusOK,
-		"data kategori berhasil diambil",
+		"data meja berhasil diambil",
 		response,
 	)
 }
 
-func (h *CategoryHandler) GetCategoryByName(
-	c *gin.Context,
-) {
-	name := strings.TrimSpace(
-		c.Param("name"),
-	)
-
-	if name == "" {
-		utils.ErrorResponse(
-			c,
-			http.StatusBadRequest,
-			"nama kategori tidak valid",
-			nil,
-		)
-		return
-	}
-
-	response, err :=
-		h.categoryService.GetCategoryByName(
-			c.Request.Context(),
-			name,
-		)
-
-	if err != nil {
-		switch {
-		case errors.Is(
-			err,
-			services.ErrCategoryNotFound,
-		):
-			utils.ErrorResponse(
-				c,
-				http.StatusNotFound,
-				err.Error(),
-				nil,
-			)
-
-		default:
-			utils.InternalServerError(c)
-		}
-
-		return
-	}
-
-	utils.SuccessResponse(
-		c,
-		http.StatusOK,
-		"data kategori berhasil diambil",
-		response,
-	)
-}
-
-func (h *CategoryHandler) UpdateCategory(
+func (h *DiningTableHandler) UpdateDiningTable(
 	c *gin.Context,
 ) {
 	id, err := strconv.ParseInt(
@@ -212,26 +160,26 @@ func (h *CategoryHandler) UpdateCategory(
 		utils.ErrorResponse(
 			c,
 			http.StatusBadRequest,
-			"id kategori tidak valid",
+			"id meja tidak valid",
 			nil,
 		)
 		return
 	}
 
-	var request dto.UpdateCategoryRequest
+	var request dto.UpdateDiningTableRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		utils.ErrorResponse(
 			c,
 			http.StatusBadRequest,
-			"data kategori tidak valid",
+			"data meja tidak valid",
 			err.Error(),
 		)
 		return
 	}
 
 	response, err :=
-		h.categoryService.UpdateCategory(
+		h.diningTableService.UpdateDiningTable(
 			c.Request.Context(),
 			id,
 			request,
@@ -241,7 +189,7 @@ func (h *CategoryHandler) UpdateCategory(
 		switch {
 		case errors.Is(
 			err,
-			services.ErrCategoryNotFound,
+			services.ErrDiningTableNotFound,
 		):
 			utils.ErrorResponse(
 				c,
@@ -252,7 +200,7 @@ func (h *CategoryHandler) UpdateCategory(
 
 		case errors.Is(
 			err,
-			services.ErrCategoryExists,
+			services.ErrDiningTableExists,
 		):
 			utils.ErrorResponse(
 				c,
@@ -271,12 +219,12 @@ func (h *CategoryHandler) UpdateCategory(
 	utils.SuccessResponse(
 		c,
 		http.StatusOK,
-		"kategori berhasil diperbarui",
+		"meja berhasil diperbarui",
 		response,
 	)
 }
 
-func (h *CategoryHandler) DeleteCategory(
+func (h *DiningTableHandler) DeleteDiningTable(
 	c *gin.Context,
 ) {
 	id, err := strconv.ParseInt(
@@ -289,13 +237,13 @@ func (h *CategoryHandler) DeleteCategory(
 		utils.ErrorResponse(
 			c,
 			http.StatusBadRequest,
-			"id kategori tidak valid",
+			"id meja tidak valid",
 			nil,
 		)
 		return
 	}
 
-	err = h.categoryService.DeleteCategory(
+	err = h.diningTableService.DeleteDiningTable(
 		c.Request.Context(),
 		id,
 	)
@@ -304,7 +252,7 @@ func (h *CategoryHandler) DeleteCategory(
 		switch {
 		case errors.Is(
 			err,
-			services.ErrCategoryNotFound,
+			services.ErrDiningTableNotFound,
 		):
 			utils.ErrorResponse(
 				c,
@@ -323,7 +271,56 @@ func (h *CategoryHandler) DeleteCategory(
 	utils.SuccessResponse(
 		c,
 		http.StatusOK,
-		"kategori berhasil dihapus",
+		"meja berhasil dihapus",
 		nil,
+	)
+}
+
+func (h *DiningTableHandler) GetDiningTableByQRToken(
+	c *gin.Context,
+) {
+	token := c.Param("token")
+
+	if token == "" {
+		utils.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"QR token tidak valid",
+			nil,
+		)
+		return
+	}
+
+	response, err :=
+		h.diningTableService.GetDiningTableByQRToken(
+			c.Request.Context(),
+			token,
+		)
+
+	if err != nil {
+		switch {
+		case errors.Is(
+			err,
+			services.ErrDiningTableNotFound,
+		):
+			utils.ErrorResponse(
+				c,
+				http.StatusNotFound,
+				err.Error(),
+				nil,
+			)
+
+		default:
+			utils.InternalServerError(c)
+		}
+
+		return
+	}
+
+	utils.SuccessResponse(
+		c,
+		http.StatusOK,
+		"meja berhasil ditemukan",
+		response,
 	)
 }
