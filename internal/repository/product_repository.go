@@ -32,6 +32,11 @@ type ProductRepository interface {
 		categoryID int64,
 	) ([]models.Product, error)
 
+	FindExactByName(
+	ctx context.Context,
+	name string,
+) (*models.Product, error)
+
 	Create(
 		ctx context.Context,
 		product *models.Product,
@@ -327,6 +332,62 @@ func (r *productRepository) FindByCategoryID(
 	}
 
 	return products, nil
+}
+
+func (r *productRepository) FindExactByName(
+	ctx context.Context,
+	name string,
+) (*models.Product, error) {
+	const query = `
+		SELECT
+			id,
+			category_id,
+			name,
+			slug,
+			description,
+			price,
+			image_url,
+			stock,
+			is_available,
+			created_at,
+			updated_at
+		FROM products
+		WHERE LOWER(name) = LOWER($1)
+		LIMIT 1
+	`
+
+	var product models.Product
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		name,
+	).Scan(
+		&product.ID,
+		&product.CategoryID,
+		&product.Name,
+		&product.Slug,
+		&product.Description,
+		&product.Price,
+		&product.ImageURL,
+		&product.Stock,
+		&product.IsAvailable,
+		&product.CreatedAt,
+		&product.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrProductNotFound
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to find product by exact name: %w",
+			err,
+		)
+	}
+
+	return &product, nil
 }
 
 func (r *productRepository) Create(
