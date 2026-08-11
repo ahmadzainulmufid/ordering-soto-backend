@@ -172,6 +172,59 @@ func (h *OrderHandler) GetAllOrders(
 	)
 }
 
+func (h *OrderHandler) GetOrderByID(
+	c *gin.Context,
+) {
+	id, err := strconv.ParseInt(
+		c.Param("id"),
+		10,
+		64,
+	)
+
+	if err != nil || id <= 0 {
+		utils.ErrorResponse(
+			c,
+			http.StatusBadRequest,
+			"id order tidak valid",
+			nil,
+		)
+		return
+	}
+
+	response, err :=
+		h.orderService.GetOrderByID(
+			c.Request.Context(),
+			id,
+		)
+
+	if err != nil {
+		switch {
+		case errors.Is(
+			err,
+			services.ErrOrderNotFound,
+		):
+			utils.ErrorResponse(
+				c,
+				http.StatusNotFound,
+				err.Error(),
+				nil,
+			)
+
+		default:
+			utils.InternalServerError(c)
+		}
+
+		return
+	}
+
+	utils.SuccessResponse(
+		c,
+		http.StatusOK,
+		"data order berhasil diambil",
+		response,
+	)
+}
+
 func (h *OrderHandler) GetOrderByCode(
 	c *gin.Context,
 ) {

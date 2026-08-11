@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"net/http"
-
 	"SotoAyam/internal/handlers"
 	"SotoAyam/internal/middleware"
 	"SotoAyam/internal/utils"
@@ -10,35 +8,55 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type Handlers struct {
+	AuthHandler        *handlers.AuthHandler
+	CategoryHandler    *handlers.CategoryHandler
+	ProductHandler     *handlers.ProductHandler
+	DiningTableHandler *handlers.DiningTableHandler
+	OrderHandler       *handlers.OrderHandler
+}
+
 func NewRouter(
-	authHandler *handlers.AuthHandler,
+	handlers Handlers,
 	jwtManager *utils.JWTManager,
 ) *gin.Engine {
 	router := gin.New()
 
-	router.Use(middleware.CORSMiddleware())
-
 	router.Use(
-		gin.Logger(),
 		gin.Recovery(),
+		middleware.LoggerMiddleware(),
+		middleware.CORSMiddleware(),
 	)
 
-	router.GET("/health", func(c *gin.Context) {
-		utils.SuccessResponse(
-			c,
-			http.StatusOK,
-			"API berjalan dengan baik",
-			gin.H{
-				"status": "healthy",
-			},
-		)
-	})
-
-	apiV1 := router.Group("/api/v1")
+	api := router.Group("/api/v1")
 
 	RegisterAuthRoutes(
-		apiV1,
-		authHandler,
+		api,
+		handlers.AuthHandler,
+		jwtManager,
+	)
+
+	RegisterCategoryRoutes(
+		api,
+		handlers.CategoryHandler,
+		jwtManager,
+	)
+
+	RegisterProductRoutes(
+		api,
+		handlers.ProductHandler,
+		jwtManager,
+	)
+
+	RegisterDiningTableRoutes(
+		api,
+		handlers.DiningTableHandler,
+		jwtManager,
+	)
+
+	RegisterOrderRoutes(
+		api,
+		handlers.OrderHandler,
 		jwtManager,
 	)
 
