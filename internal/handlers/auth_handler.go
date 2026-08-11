@@ -142,6 +142,23 @@ func (h *AuthHandler) CreateUser(c *gin.Context) {
 	)
 }
 
+func (h *AuthHandler) Register(c *gin.Context) {
+    var request dto.CreateUserRequest 
+
+    if err := c.ShouldBindJSON(&request); err != nil {
+        utils.ErrorResponse(c, http.StatusBadRequest, "data registrasi tidak valid", err.Error())
+        return
+    }
+
+    response, err := h.authService.CreateUser(c.Request.Context(), request, "user")
+    if err != nil {
+        utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+        return
+    }
+
+    utils.SuccessResponse(c, http.StatusCreated, "registrasi berhasil", response)
+}
+
 func (h *AuthHandler) Profile(c *gin.Context) {
 	userIDValue, exists := c.Get("user_id")
 	if !exists {

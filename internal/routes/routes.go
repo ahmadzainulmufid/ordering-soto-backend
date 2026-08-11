@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"SotoAyam/internal/handlers"
+	"SotoAyam/internal/middleware"
 	"SotoAyam/internal/utils"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +15,8 @@ func NewRouter(
 	jwtManager *utils.JWTManager,
 ) *gin.Engine {
 	router := gin.New()
+
+	router.Use(middleware.CORSMiddleware())
 
 	router.Use(
 		gin.Logger(),
