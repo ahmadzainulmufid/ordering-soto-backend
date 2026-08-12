@@ -17,7 +17,7 @@ type CreateOrderRequest struct {
 }
 
 type UpdateOrderStatusRequest struct {
-	Status string `json:"status" binding:"required,oneof=confirmed preparing ready completed cancelled"`
+	Status string `json:"status" binding:"required,oneof=confirmed cooking ready served delivering completed cancelled"`
 }
 
 type OrderItemResponse struct {

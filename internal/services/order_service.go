@@ -223,9 +223,7 @@ func (s *orderService) CreateOrder(
 		return nil, ErrInvalidOrderType
 	}
 
-	// ==============================
 	// Validasi Dine In
-	// ==============================
 
 	var tableID sql.NullInt64
 
@@ -264,9 +262,7 @@ func (s *orderService) CreateOrder(
 		}
 	}
 
-	// ==============================
 	// Validasi Delivery
-	// ==============================
 
 	deliveryAddress :=
 		strings.TrimSpace(
@@ -278,9 +274,7 @@ func (s *orderService) CreateOrder(
 		return nil, ErrDeliveryAddress
 	}
 
-	// ==============================
 	// Validasi Items
-	// ==============================
 
 	if len(request.Items) == 0 {
 		return nil, errors.New(
@@ -378,9 +372,7 @@ func (s *orderService) CreateOrder(
 		subtotal += itemSubtotal
 	}
 
-	// ==============================
 	// Biaya Order
-	// ==============================
 
 	var deliveryFee float64
 
@@ -397,9 +389,7 @@ func (s *orderService) CreateOrder(
 			deliveryFee -
 			discount
 
-	// ==============================
 	// Buat Order
-	// ==============================
 
 	order := &models.Order{
 		OrderCode:     generateOrderCode(),
@@ -443,9 +433,7 @@ func (s *orderService) CreateOrder(
 		}
 	}
 
-	// ==============================
 	// Database Transaction
-	// ==============================
 
 	tx, err :=
 		s.orderRepository.BeginTx(ctx)
@@ -470,9 +458,7 @@ func (s *orderService) CreateOrder(
 		)
 	}
 
-	// ==============================
 	// Insert Order Items
-	// ==============================
 
 	for i := range orderItems {
 		orderItems[i].OrderID = order.ID
@@ -490,9 +476,7 @@ func (s *orderService) CreateOrder(
 		}
 	}
 
-	// ==============================
 	// Status History
-	// ==============================
 
 	history := &models.OrderStatusHistory{
 		OrderID: order.ID,
@@ -515,9 +499,7 @@ func (s *orderService) CreateOrder(
 		)
 	}
 
-	// ==============================
 	// Commit
-	// ==============================
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf(
@@ -675,16 +657,24 @@ func isValidStatusTransition(
 			"cancelled",
 		},
 		"confirmed": {
-			"preparing",
+			"cooking",
 			"cancelled",
 		},
-		"preparing": {
+		"cooking": {
 			"ready",
 			"cancelled",
 		},
 		"ready": {
+			"served",
+			"delivering",
 			"completed",
 			"cancelled",
+		},
+		"served": {
+			"completed",
+		},
+		"delivering": {
+			"completed",
 		},
 	}
 
