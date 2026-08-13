@@ -21,6 +21,9 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id int64) (*models.User, error)
 	Create(ctx context.Context, user *models.User) error
 	UpdateLastLogin(ctx context.Context, ID int64) error
+	FindAll(ctx context.Context) ([]models.User, error)
+	Update(ctx context.Context, id int64, fullName, phone, role string) error
+	Delete(ctx context.Context, id int64) error
 }
 
 type userRepository struct {
@@ -186,4 +189,71 @@ func (r *userRepository) UpdateLastLogin(
 	}
 
 	return nil
+}
+
+func (r *userRepository) FindAll(ctx context.Context) ([]models.User, error) {
+	const query = `
+		SELECT
+			id,
+			full_name,
+			email,
+			phone,
+			password_hash,
+			role,
+			is_active,
+			last_login_at,
+			created_at,
+			updated_at
+		FROM users
+		ORDER BY id ASC
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil daftar users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.ID,
+			&user.FullName,
+			&user.Email,
+			&user.Phone,
+			&user.PasswordHash,
+			&user.Role,
+			&user.IsActive,
+			&user.LastLoginAt,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("gagal scan data user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error pada iterasi rows user: %w", err)
+	}
+
+	return users, nil
+}
+
+func (r *userRepository) Update(ctx context.Context, id int64, fullName, phone, role string) error {
+	const query = `
+		UPDATE users 
+		SET full_name = $1, phone = $2, role = $3, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $4 AND role != 'owner'
+	`
+	_, err := r.db.Exec(ctx, query, fullName, phone, role, id)
+	return err
+}
+
+func (r *userRepository) Delete(ctx context.Context, id int64) error {
+	const query = `DELETE FROM users WHERE id = $1 AND role != 'owner'`
+	_, err := r.db.Exec(ctx, query, id)
+	return err
 }

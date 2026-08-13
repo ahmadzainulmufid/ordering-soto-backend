@@ -36,6 +36,10 @@ type AuthService interface {
 		ctx context.Context,
 		userID int64,
 	) (*dto.UserResponse, error)
+
+	GetAllUsers(ctx context.Context) ([]dto.UserResponse, error)
+	UpdateUser(ctx context.Context, id int64, fullName, phone, role string) error
+	DeleteUser(ctx context.Context, id int64) error
 }
 
 type authService struct {
@@ -205,4 +209,26 @@ func isAllowedEmployeeRole(role string) bool {
 	default:
 		return false
 	}
+}
+
+func (s *authService) GetAllUsers(ctx context.Context) ([]dto.UserResponse, error) {
+	users, err := s.userRepository.FindAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil seluruh data user: %w", err)
+	}
+
+	userResponses := make([]dto.UserResponse, 0, len(users))
+	for _, user := range users {
+		userResponses = append(userResponses, mapUserResponse(&user))
+	}
+
+	return userResponses, nil
+}
+
+func (s *authService) UpdateUser(ctx context.Context, id int64, fullName, phone, role string) error {
+	return s.userRepository.Update(ctx, id, fullName, phone, role)
+}
+
+func (s *authService) DeleteUser(ctx context.Context, id int64) error {
+	return s.userRepository.Delete(ctx, id)
 }

@@ -32,5 +32,8 @@ func RegisterAuthRoutes(
 	)
 	{
 		adminUsers.POST("", authHandler.CreateUser)
+		adminUsers.GET("", authHandler.GetAllUsers)
+		adminUsers.PUT("/:id", authHandler.UpdateUser)
+		adminUsers.DELETE("/:id", authHandler.DeleteUser)
 	}
 }
