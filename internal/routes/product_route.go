@@ -35,7 +35,7 @@ func RegisterProductRoutes(
 
 	adminProducts.Use(
 		middleware.AuthMiddleware(jwtManager),
-		middleware.RequireRoles("owner"),
+		middleware.RequireRoles("owner", "admin"),
 	)
 
 	{
