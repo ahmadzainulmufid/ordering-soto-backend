@@ -373,12 +373,9 @@ func (s *orderService) CreateOrder(
 	}
 
 	// Biaya Order
-
 	var deliveryFee float64
 
 	if orderType == "delivery" {
-		// Untuk sekarang fixed.
-		// Nanti bisa dipindahkan ke settings/database.
 		deliveryFee = 5000
 	}
 
@@ -390,7 +387,6 @@ func (s *orderService) CreateOrder(
 			discount
 
 	// Buat Order
-
 	order := &models.Order{
 		OrderCode:     generateOrderCode(),
 		CustomerName:  customerName,
@@ -403,6 +399,13 @@ func (s *orderService) CreateOrder(
 		Discount:      discount,
 		Total:         total,
 	}
+
+	if strings.TrimSpace(request.PaymentMethod) != "" {
+        order.PaymentMethod = sql.NullString{
+            String: strings.TrimSpace(request.PaymentMethod),
+            Valid:  true,
+        }
+    }
 
 	if strings.TrimSpace(
 		request.CustomerPhone,

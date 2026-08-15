@@ -21,6 +21,8 @@ func RegisterDiningTableRoutes(
 			"/qr/:token",
 			diningTableHandler.GetDiningTableByQRToken,
 		)
+
+		tables.GET("", diningTableHandler.GetAllDiningTables)
 	}
 
 	// Admin:

@@ -12,6 +12,7 @@ type CreateOrderRequest struct {
 	OrderType       string                   `json:"order_type" binding:"required,oneof=dine_in takeaway delivery"`
 	TableID         *int64                   `json:"table_id"`
 	DeliveryAddress string                   `json:"delivery_address"`
+	PaymentMethod   string                   `json:"payment_method" binding:"required,oneof=cash online_payment"`
 	Notes           string                   `json:"notes"`
 	Items           []CreateOrderItemRequest `json:"items" binding:"required,min=1,dive"`
 }
