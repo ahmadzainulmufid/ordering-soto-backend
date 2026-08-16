@@ -33,6 +33,8 @@ func RegisterOrderRoutes(
 		middleware.RequireRoles(
 			"owner",
 			"cashier",
+			"admin",
+			"kitchen",
 		),
 	)
 
