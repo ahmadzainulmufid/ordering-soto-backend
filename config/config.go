@@ -11,6 +11,7 @@ type Config struct {
 	App      AppConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
+	Midtrans	MidtransConfig
 }
 
 type AppConfig struct {
@@ -99,6 +100,21 @@ func LoadConfig() (*Config, error) {
 			MaxConnIdleTime:   10 * time.Minute,
 			HealthCheckPeriod: 30 * time.Second,
 		},
+
+		Midtrans: MidtransConfig{
+			ServerKey: getEnv(
+				"MIDTRANS_SERVER_KEY",
+				"",
+			),
+			ClientKey: getEnv(
+				"MIDTRANS_CLIENT_KEY",
+				"",
+			),
+			IsProduction: getEnv(
+				"MIDTRANS_IS_PRODUCTION",
+				"false",
+			) == "true",
+		},
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -124,6 +140,12 @@ func (c *Config) Validate() error {
 	if len(c.JWT.AccessSecret) < 32 {
 		return fmt.Errorf(
 			"JWT_ACCESS_SECRET minimal 32 karakter",
+		)
+	}
+
+	if c.Midtrans.ServerKey == "" {
+		return fmt.Errorf(
+			"MIDTRANS_SERVER_KEY tidak boleh kosong",
 		)
 	}
 

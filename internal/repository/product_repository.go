@@ -51,6 +51,8 @@ type ProductRepository interface {
 		ctx context.Context,
 		id int64,
 	) error
+
+	ReduceStock(ctx context.Context, tx pgx.Tx, productID int64, quantity int) error
 }
 
 type productRepository struct {
@@ -517,5 +519,28 @@ func (r *productRepository) Delete(
 		return ErrProductNotFound
 	}
 
+	return nil
+}
+
+func (r *productRepository) ReduceStock(
+	ctx context.Context,
+	tx pgx.Tx,
+	productID int64,
+	quantity int,
+) error {
+	const query = `
+		UPDATE products
+		SET stock = stock - $1,
+			is_available = CASE WHEN (stock - $1) <= 0 THEN false ELSE is_available END,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2 AND stock >= $1
+	`
+	result, err := tx.Exec(ctx, query, quantity, productID)
+	if err != nil {
+		return fmt.Errorf("gagal mengurangi stok produk: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("stok produk tidak mencukupi atau produk tidak ditemukan")
+	}
 	return nil
 }

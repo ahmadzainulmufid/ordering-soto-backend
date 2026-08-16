@@ -61,6 +61,19 @@ type OrderRepository interface {
 	BeginTx(
 		ctx context.Context,
 	) (pgx.Tx, error)
+
+	UpdateSnapToken(
+	ctx context.Context,
+	orderID int64,
+	token string,
+	) error
+
+	UpdatePaymentStatus(
+		ctx context.Context,
+		tx pgx.Tx,
+		orderID int64,
+		paymentStatus string,
+	) error
 }
 
 type orderRepository struct {
@@ -220,6 +233,7 @@ func (r *orderRepository) FindByID(
 			delivery_fee,
 			discount,
 			total,
+			snap_token,
 			created_at,
 			updated_at
 		FROM orders
@@ -250,6 +264,7 @@ func (r *orderRepository) FindByID(
 		&order.DeliveryFee,
 		&order.Discount,
 		&order.Total,
+		&order.SnapToken,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 	)
@@ -290,6 +305,7 @@ func (r *orderRepository) FindByCode(
 			delivery_fee,
 			discount,
 			total,
+			snap_token,
 			created_at,
 			updated_at
 		FROM orders
@@ -320,6 +336,7 @@ func (r *orderRepository) FindByCode(
 		&order.DeliveryFee,
 		&order.Discount,
 		&order.Total,
+		&order.SnapToken,
 		&order.CreatedAt,
 		&order.UpdatedAt,
 	)
@@ -553,6 +570,73 @@ func (r *orderRepository) CreateStatusHistory(
 			"gagal membuat history status order: %w",
 			err,
 		)
+	}
+
+	return nil
+}
+
+func (r *orderRepository) UpdateSnapToken(
+	ctx context.Context,
+	orderID int64,
+	token string,
+) error {
+	const query = `
+		UPDATE orders
+		SET
+			snap_token = $1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	result, err := r.db.Exec(
+		ctx,
+		query,
+		token,
+		orderID,
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"gagal menyimpan snap token: %w",
+			err,
+		)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrOrderNotFound
+	}
+
+	return nil
+}
+
+func (r *orderRepository) UpdatePaymentStatus(
+	ctx context.Context,
+	tx pgx.Tx,
+	orderID int64,
+	paymentStatus string,
+) error {
+	const query = `
+		UPDATE orders
+		SET
+			payment_status = $1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	result, err := tx.Exec(
+		ctx,
+		query,
+		paymentStatus,
+		orderID,
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"gagal memperbarui payment status: %w",
+			err,
+		)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrOrderNotFound
 	}
 
 	return nil

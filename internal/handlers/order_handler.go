@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"SotoAyam/internal/dto"
+	"SotoAyam/internal/repository"
 	"SotoAyam/internal/services"
 	"SotoAyam/internal/utils"
 
@@ -15,13 +16,19 @@ import (
 
 type OrderHandler struct {
 	orderService services.OrderService
+	orderRepository repository.OrderRepository
+	paymentService  services.PaymentService
 }
 
 func NewOrderHandler(
 	orderService services.OrderService,
+	orderRepository repository.OrderRepository,
+	paymentService  services.PaymentService,
 ) *OrderHandler {
 	return &OrderHandler{
 		orderService: orderService,
+		orderRepository: orderRepository,
+        paymentService:  paymentService,
 	}
 }
 
@@ -141,6 +148,24 @@ func (h *OrderHandler) CreateOrder(
 		}
 
 		return
+	}
+
+	if request.PaymentMethod == "online_payment" || request.PaymentMethod == "qris" {
+		order, err := h.orderRepository.FindByCode(c.Request.Context(), response.OrderCode)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "order dibuat tapi gagal memuat ulang untuk pembayaran",
+			})
+			return
+		}
+
+		snapResp, err := h.paymentService.CreateSnapTransaction(c.Request.Context(), order)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+			return
+		}
+
+		response.SnapToken = snapResp.SnapToken
 	}
 
 	utils.SuccessResponse(
@@ -336,6 +361,7 @@ func (h *OrderHandler) UpdateOrderStatus(
 			c.Request.Context(),
 			id,
 			request.Status,
+			request.PaymentStatus, // <-- diteruskan ke service
 			changedBy,
 		)
 
@@ -377,4 +403,3 @@ func (h *OrderHandler) UpdateOrderStatus(
 		response,
 	)
 }
-

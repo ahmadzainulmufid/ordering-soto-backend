@@ -48,6 +48,7 @@ type OrderService interface {
 		ctx context.Context,
 		orderID int64,
 		status string,
+		paymentStatus string,
 		changedBy *int64,
 	) (*dto.OrderResponse, error)
 }
@@ -221,6 +222,14 @@ func (s *orderService) CreateOrder(
 		orderType != "takeaway" &&
 		orderType != "delivery" {
 		return nil, ErrInvalidOrderType
+	}
+
+	paymentMethod := strings.ToLower(
+		strings.TrimSpace(request.PaymentMethod),
+	)
+
+	if paymentMethod == "qris" {
+		paymentMethod = "online_payment"
 	}
 
 	// Validasi Dine In
@@ -504,6 +513,21 @@ func (s *orderService) CreateOrder(
 
 	// Commit
 
+	for i := range orderItems {
+	orderItems[i].OrderID = order.ID
+
+	if err := s.orderRepository.CreateItem(ctx, tx, &orderItems[i]); err != nil {
+		return nil, fmt.Errorf("failed to create order item: %w", err)
+	}
+
+	if orderItems[i].ProductID.Valid {
+			err := s.productRepository.ReduceStock(ctx, tx, orderItems[i].ProductID.Int64, orderItems[i].Quantity)
+			if err != nil {
+				return nil, fmt.Errorf("failed to reduce stock for product %s: %w", orderItems[i].ProductName, err)
+			}
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf(
 			"failed to commit transaction: %w",
@@ -523,6 +547,7 @@ func (s *orderService) UpdateOrderStatus(
 	ctx context.Context,
 	orderID int64,
 	newStatus string,
+	requestedPaymentStatus string,
 	changedBy *int64,
 ) (*dto.OrderResponse, error) {
 	order, err :=
@@ -556,6 +581,23 @@ func (s *orderService) UpdateOrderStatus(
 		return nil, ErrInvalidOrderStatus
 	}
 
+	// Tentukan payment_status akhir:
+	// 1. Kalau dikirim eksplisit di request (mis. dari kasir "paid"), pakai itu.
+	// 2. Kalau tidak dikirim tapi status baru = confirmed, default ke "paid".
+	// 3. Selain itu, payment_status tidak berubah.
+	newPaymentStatus := order.PaymentStatus
+
+	trimmedPaymentStatus := strings.ToLower(
+		strings.TrimSpace(requestedPaymentStatus),
+	)
+
+	switch {
+	case trimmedPaymentStatus != "":
+		newPaymentStatus = trimmedPaymentStatus
+	case newStatus == "confirmed":
+		newPaymentStatus = "paid"
+	}
+
 	tx, err :=
 		s.orderRepository.BeginTx(ctx)
 
@@ -586,6 +628,21 @@ func (s *orderService) UpdateOrderStatus(
 			"failed to update order status: %w",
 			err,
 		)
+	}
+
+	if newPaymentStatus != order.PaymentStatus {
+		if err :=
+			s.orderRepository.UpdatePaymentStatus(
+				ctx,
+				tx,
+				orderID,
+				newPaymentStatus,
+			); err != nil {
+			return nil, fmt.Errorf(
+				"failed to update payment status: %w",
+				err,
+			)
+		}
 	}
 
 	history := &models.OrderStatusHistory{
@@ -628,6 +685,7 @@ func (s *orderService) UpdateOrderStatus(
 	}
 
 	order.Status = newStatus
+	order.PaymentStatus = newPaymentStatus
 
 	items, err :=
 		s.orderRepository.FindItemsByOrderID(
@@ -776,6 +834,11 @@ func mapOrderResponse(
 	if order.Notes.Valid {
 		response.Notes =
 			order.Notes.String
+	}
+
+	if order.SnapToken.Valid {
+		response.SnapToken =
+			order.SnapToken.String
 	}
 
 	return response

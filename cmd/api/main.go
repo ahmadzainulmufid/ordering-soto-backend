@@ -94,6 +94,8 @@ func main() {
 			dbPool,
 		)
 
+	paymentRepository := repository.NewPaymentRepository(dbPool)
+
 	// Service
 
 	authService :=
@@ -125,6 +127,13 @@ func main() {
 			diningTableRepository,
 		)
 
+	paymentService := 
+		services.NewPaymentService(
+			orderRepository,
+			paymentRepository,
+			cfg.Midtrans,
+	)
+
 	// Handler
 
 	authHandler :=
@@ -150,7 +159,12 @@ func main() {
 	orderHandler :=
 		handlers.NewOrderHandler(
 			orderService,
+			orderRepository,
+			paymentService,
+
 		)
+
+	paymentHandler := handlers.NewPaymentHandler(paymentService)
 
 	// Router
 
@@ -161,6 +175,7 @@ func main() {
 			ProductHandler:     productHandler,
 			DiningTableHandler: diningTableHandler,
 			OrderHandler:       orderHandler,
+			PaymentHandler:     paymentHandler,
 		},
 		jwtManager,
 	)

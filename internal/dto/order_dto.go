@@ -12,13 +12,14 @@ type CreateOrderRequest struct {
 	OrderType       string                   `json:"order_type" binding:"required,oneof=dine_in takeaway delivery"`
 	TableID         *int64                   `json:"table_id"`
 	DeliveryAddress string                   `json:"delivery_address"`
-	PaymentMethod   string                   `json:"payment_method" binding:"required,oneof=cash online_payment"`
+	PaymentMethod   string                   `json:"payment_method" binding:"required,oneof=cash online_payment qris"`
 	Notes           string                   `json:"notes"`
 	Items           []CreateOrderItemRequest `json:"items" binding:"required,min=1,dive"`
 }
 
 type UpdateOrderStatusRequest struct {
-	Status string `json:"status" binding:"required,oneof=confirmed cooking ready served delivering completed cancelled"`
+	Status        string `json:"status" binding:"required,oneof=confirmed cooking ready served delivering completed cancelled"`
+	PaymentStatus string `json:"payment_status"`
 }
 
 type OrderItemResponse struct {
@@ -45,6 +46,7 @@ type OrderResponse struct {
 	Subtotal        float64             `json:"subtotal"`
 	DeliveryFee     float64             `json:"delivery_fee"`
 	Discount        float64             `json:"discount"`
+	SnapToken       string              `json:"snap_token,omitempty"`
 	Total           float64             `json:"total"`
 	Items           []OrderItemResponse `json:"items"`
 }

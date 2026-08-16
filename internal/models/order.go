@@ -22,6 +22,7 @@ type Order struct {
 	DeliveryFee     float64        `db:"delivery_fee"`
 	Discount        float64        `db:"discount"`
 	Total           float64        `db:"total"`
+	SnapToken		sql.NullString	`db:"snap_token"`
 	CreatedAt       time.Time      `db:"created_at"`
 	UpdatedAt       time.Time      `db:"updated_at"`
 }

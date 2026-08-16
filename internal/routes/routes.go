@@ -14,6 +14,7 @@ type Handlers struct {
 	ProductHandler     *handlers.ProductHandler
 	DiningTableHandler *handlers.DiningTableHandler
 	OrderHandler       *handlers.OrderHandler
+	PaymentHandler     *handlers.PaymentHandler
 }
 
 func NewRouter(
@@ -58,6 +59,11 @@ func NewRouter(
 		api,
 		handlers.OrderHandler,
 		jwtManager,
+	)
+
+	RegisterPaymentRoutes(
+		api,
+		handlers.PaymentHandler,
 	)
 
 	return router
