@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
-	password := "Owner123!"
+	password := os.Getenv("PASSWORD_OWNER")
 
 	hash, err := bcrypt.GenerateFromPassword(
 		[]byte(password),
