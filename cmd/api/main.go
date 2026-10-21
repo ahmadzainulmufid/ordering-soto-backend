@@ -134,8 +134,18 @@ func main() {
 			cfg.Midtrans,
 	)
 
-	// Handler
+	uploadService, err := 
+		services.NewUploadService(
+			os.Getenv("CLOUDINARY_URL"),
+	)
+	if err != nil {
+		log.Fatalf(
+			"cloudinary gagal diinisialisasi: %v",
+			err,
+		)
+	}
 
+	// Handler
 	authHandler :=
 		handlers.NewAuthHandler(
 			authService,
@@ -150,6 +160,10 @@ func main() {
 		handlers.NewProductHandler(
 			productService,
 		)
+	
+	uploadHandler := handlers.NewUploadHandler(
+		uploadService,
+	)
 
 	diningTableHandler :=
 		handlers.NewDiningTableHandler(
@@ -173,6 +187,7 @@ func main() {
 			AuthHandler:        authHandler,
 			CategoryHandler:    categoryHandler,
 			ProductHandler:     productHandler,
+			UploadHandler: 		uploadHandler,
 			DiningTableHandler: diningTableHandler,
 			OrderHandler:       orderHandler,
 			PaymentHandler:     paymentHandler,
