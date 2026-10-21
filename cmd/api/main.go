@@ -74,6 +74,11 @@ func main() {
 			dbPool,
 		)
 
+	customerRepository :=
+		repository.NewCustomerRepository(
+			dbPool,
+		)
+
 	categoryRepository :=
 		repository.NewCategoryRepository(
 			dbPool,
@@ -101,6 +106,12 @@ func main() {
 	authService :=
 		services.NewAuthService(
 			userRepository,
+			jwtManager,
+		)
+	
+	customerService :=
+		services.NewCustomerAuthService(
+			customerRepository,
 			jwtManager,
 		)
 
@@ -150,6 +161,11 @@ func main() {
 		handlers.NewAuthHandler(
 			authService,
 		)
+	
+	customerHandler :=
+		handlers.NewCustomerAuthHandler(
+			customerService,
+		)
 
 	categoryHandler :=
 		handlers.NewCategoryHandler(
@@ -191,6 +207,7 @@ func main() {
 			DiningTableHandler: diningTableHandler,
 			OrderHandler:       orderHandler,
 			PaymentHandler:     paymentHandler,
+			CustomerHandler: 	customerHandler,
 		},
 		jwtManager,
 	)
